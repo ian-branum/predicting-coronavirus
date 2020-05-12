@@ -4,71 +4,89 @@ import scipy.stats as stats
 import pandas as pd
 from datetime import datetime
 import mpu
+import re
 #from util import get_state
 
 
-def fix_nyt_date(row):
+def fix_nyt(row):
     row['date'] = datetime.strptime(row['date'], '%Y-%m-%d')
+    row['fips'] = int(row['fips'])
     return row
 
-def extract_nyt(fn="./data/raw/covid-19-data/us-counties.csv"):
+def extract_nyt(fn="./data/covid-19-data/us-counties.csv"):
     df = pd.read_csv(fn)
-    df = df.apply(fix_nyt_date, axis=1)
-    df = df.apply(strip_state, axis=1)
     df['sc'] = df['state'] + ':' + df['county']
     df = df[df['cases'] > 0]
     df = df[df['fips'] > 0]
-    #df['fips'].fillna(0, inplace=True)
-    #df['cases'].fillna(0, inplace=True)
-    #df['deaths'].fillna(0, inplace=True)
+    df['fips'].fillna(0, inplace=True)
+    df = df.apply(fix_nyt, axis=1)
+    df = df.apply(strip_state, axis=1)
     return df
+
+def get_county(row):
+    working = row['Geographic Area Name'].split(",")[0].split(' ')
+    working = working[:len(working)-1]
+    row['county'] = ' '.join(working)
+    return row
+
+def get_fips(row):
+    fips = row['id'].split('US')[1]
+    row['fips'] = int(fips)
+    return row
+    
 
 def strip_state(row):
     row['state'] = row['state'].strip()
     row['county'] = row['county'].strip()
     return row
 
-def extract_hhi(fn="./data/raw/Census/HH_income.csv"):
+def extract_hhi(fn="./data/Census/HH_income.csv"):
     df = pd.read_csv(fn)
-    df['county'] = df['Geographic Area Name'].str.split(",",expand=True,)[0].str.split(" ", expand=True)[0]
+    df = df.apply(get_county, axis=1)
+    df = df.apply(get_fips, axis=1)
     df['state'] = df['Geographic Area Name'].str.split(",",expand=True,)[1]
     df = df.apply(strip_state, axis=1)
     df['sc'] = df['state'] + ':' + df['county']
     ret = df[[
         'sc',
+        'fips',
         #'state', 
         #'county',
         'Estimate!!Households!!Total',
         'Estimate!!Households!!Median income (dollars)',
         'Estimate!!Households!!Mean income (dollars)'
     ]]
-    ret.columns = ['sc', 'households', 'mean_hhi', 'median_hhi']
+    ret.columns = ['sc', 'fips', 'households', 'mean_hhi', 'median_hhi']
     return ret
 
-def extract_public_transport(fn="./data/raw/Census/lots_of_census_data.csv"):
+def extract_public_transport(fn="./data/Census/lots_of_census_data.csv"):
     df = pd.read_csv(fn)
     df['county'] = df['Geographic Area Name'].str.split(",",expand=True,)[0].str.split(" ", expand=True)[0]
     df['state'] = df['Geographic Area Name'].str.split(",",expand=True,)[1]
     df = df.apply(strip_state, axis=1)
     df['sc'] = df['state'] + ':' + df['county']
+    df = df.apply(get_fips, axis=1)
     ret = df[[
         'sc',
+        'fips',
         #'state', 
         #'county',
         'Estimate!!Total!!Workers 16 years and over!!MEANS OF TRANSPORTATION TO WORK!!Public transportation (excluding taxicab)'
     ]]
-    ret.columns = ['sc', 'percent_commuter']
+    ret.columns = ['sc', 'fips', 'percent_commuter']
     ret.fillna(0)
     return ret
 
-def extract_edu(fn="./data/raw/Census/edu.csv"):
+def extract_edu(fn="./data/Census/edu.csv"):
     df = pd.read_csv(fn)
     df['county'] = df['Geographic Area Name'].str.split(",",expand=True,)[0].str.split(" ", expand=True)[0]
     df['state'] = df['Geographic Area Name'].str.split(",",expand=True,)[1]
     df = df.apply(strip_state, axis=1)
+    df = df.apply(get_fips, axis=1)
     df['sc'] = df['state'] + ':' + df['county']
     ret = df[[
         'sc',
+        'fips',
         #'state', 
         #'county',
         'Estimate!!Total!!Population 25 years and over',
@@ -88,6 +106,7 @@ def extract_edu(fn="./data/raw/Census/edu.csv"):
     ]]
     ret.columns = [
         'sc', 
+        'fips',
         'pop_over_25', 
         'hs', 
         'ba_plus',
@@ -97,14 +116,16 @@ def extract_edu(fn="./data/raw/Census/edu.csv"):
     return ret
 
 
-def extract_housing(fn="./data/raw/Census/housing.csv"):
+def extract_housing(fn="./data/Census/housing.csv"):
     df = pd.read_csv(fn)
     df['county'] = df['Geographic Area Name'].str.split(",",expand=True,)[0].str.split(" ", expand=True)[0]
     df['state'] = df['Geographic Area Name'].str.split(",",expand=True,)[1]
     df = df.apply(strip_state, axis=1)
+    df = df.apply(get_fips, axis=1)
     df['sc'] = df['state'] + ':' + df['county']
     ret = df[[
         'sc',
+        'fips',
         #'state', 
         #'county',
         'Estimate!!VALUE!!Owner-occupied units!!Median (dollars)',
@@ -120,6 +141,7 @@ def extract_housing(fn="./data/raw/Census/housing.csv"):
     ret.fillna(0)
     ret.columns = [
         'sc', 
+        'fips',
         'median_house_price', 
         'median_rent', 
         'percent_big_buildings'
@@ -131,7 +153,7 @@ def fix_state_abbr(row):
     row['state'] = get_state(row['state_abbr'])
     return row
 
-def extract_election(fn="./data/raw/US_County_Level_Election_Results_08-16/2016_US_County_Level_Presidential_Results.csv"):
+def extract_election(fn="./data/2016_US_County_Level_Presidential_Results.csv"):
     df = pd.read_csv(fn)
     df['county'] = df['county_name'].str.split(" ",expand=True,)[0]
     df = df.apply(fix_state_abbr, axis=1)
@@ -144,19 +166,36 @@ def extract_election(fn="./data/raw/US_County_Level_Election_Results_08-16/2016_
         'per_gop'
     ]]
 
+def fix_sip_dates(row):
+    row['SIP'] = datetime.strptime(row['SIP'], '%m/%d/%Y')
+    row['lifted'] = datetime.strptime(row['lifted'], '%m/%d/%Y')
+    return row
+
+
+def extract_sip(fn="./data/SIP.csv"):
+    df = pd.read_csv(fn)
+    df['SIP'].fillna('5/15/2020', inplace=True)
+    df['lifted'].fillna('5/15/2020', inplace=True)
+    df.apply(fix_sip_dates, axis=1)
+    return df[['state', 'SIP', 'lifted']]
+
+
+## AIRPORT STUFF
 def convert_airport_numbers(ap):
     ap.pax = int(ap.pax.replace(',', ''))
     ap.domestic = int(ap.domestic.replace(',', ''))
     ap.international = int(ap.international.replace(',', ''))
     return ap 
 
-def extract_airports(fn="./data/raw/Airports.csv"):
+def extract_airports(fn="./data/Airports.csv"):
     df = pd.read_csv(fn)
     df = df.apply(convert_airport_numbers, axis=1)
     return df
 
-def fix_state_abbr_geo(row):
+def fix_geo(row):
     row['State'] = get_state(row['State'])
+    regex = re.compile("[^a-zA-Z .']")
+    row['County'] = regex.sub('', row['County'] )
     return row
 
 def fix_county_latlon(county):
@@ -164,10 +203,28 @@ def fix_county_latlon(county):
     county['Lon'] = float(county['Lon'].replace('–','-'))
     return county 
 
-def extract_geography(fn="./data/raw/County Physical.csv"):
+def extract_geography(fn="./data/County Physical.csv"):
     df = pd.read_csv(fn, sep='\t')
-    df = df.apply(fix_state_abbr_geo, axis=1)
+    df = df.apply(fix_geo, axis=1)
     df['sc'] = df['State'] + ':' + df['County']
+    ret = df[[
+        'sc',
+        'FIPS',
+        'State',
+        'Pop',
+        'Land area km'
+    
+    ]]
+    ret.fillna(0)
+    ret.columns = [
+        'sc',
+        'fips',
+        'state',
+        'population', 
+        'area-km'
+    ]
+    return ret
+
     return df
 
 def calc_intl_arrivals_index(lat, lon, threshold, airports_df):
