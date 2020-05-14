@@ -25,7 +25,7 @@ def extract_nyt(fn="./data/covid-19-data/us-counties.csv"):
     df['fips'].fillna(0, inplace=True)
     df = df.apply(fix_nyt, axis=1)
     df = df.apply(strip_state, axis=1)
-    return df
+    return df[['fips', 'date', 'deaths', 'cases']]
 
 def fix_geo(row):
     row['State'] = get_state(row['State'])

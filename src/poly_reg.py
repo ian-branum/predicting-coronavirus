@@ -14,7 +14,7 @@ def model_county(df, county, state, degree=2):
     try:
         county_df = df[df['state'] == state]
         county_df = df[df['county'] == county]
-        county_df = county_df[county_df['cases'] > 10]
+        #county_df = county_df[county_df['cases'] > 10]
         grouped = county_df.groupby('date')
         cases = grouped['cases'].agg([np.sum])['sum'].reset_index()
         deaths = grouped['deaths'].agg([np.sum])['sum'].reset_index()
@@ -34,7 +34,7 @@ def model_county(df, county, state, degree=2):
 
 def model_state(df, state, degree=2): 
     county_df = df[df['state'] == state]
-    county_df = county_df[county_df['cases'] > 10]
+    #county_df = county_df[county_df['cases'] > 10]
     grouped = county_df.groupby('date')
     cases = grouped['cases'].agg([np.sum])['sum'].reset_index()
     deaths = grouped['deaths'].agg([np.sum])['sum'].reset_index()
