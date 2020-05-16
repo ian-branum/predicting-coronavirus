@@ -132,6 +132,5 @@ days_since_sip and days_since_10p100k are by far the most important features. da
 > Graph 7 - Tuned XGBoost Model - Static Features Only
 >![Table1](./img/static.png)
 
-
 ## Conclusion
-Given the failure of the dynamic features alone and the static features alone to be predictive, I conclude that the tuned XGBoost model, with demographic features, geographic features, and governmental action features in combinatio
+Given the failure of the dynamic features alone and the static features alone to be predictive, I conclude that the tuned XGBoost model, with demographic features, geographic features, and governmental action features in combination, can provide a highly accurate prediction of Coronovirus cases per 100,000 residents at the county level. 

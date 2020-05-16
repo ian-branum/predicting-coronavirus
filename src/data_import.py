@@ -27,6 +27,16 @@ def extract_nyt(fn="./data/covid-19-data/us-counties.csv"):
     df = df.apply(strip_state, axis=1)
     return df[['fips', 'date', 'deaths', 'cases']]
 
+def extract_full_nyt(fn="./data/covid-19-data/us-counties.csv"):
+    df = pd.read_csv(fn)
+    #df['sc'] = df['state'] + ':' + df['county']
+    df = df[df['cases'] > 0]
+    df = df[df['fips'] > 0]
+    df['fips'].fillna(0, inplace=True)
+    df = df.apply(fix_nyt, axis=1)
+    df = df.apply(strip_state, axis=1)
+    return df # [['fips', 'date', 'deaths', 'cases']]
+
 def fix_geo(row):
     row['State'] = get_state(row['State'])
     regex = re.compile("[^a-zA-Z .']")
