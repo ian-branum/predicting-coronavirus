@@ -1,6 +1,6 @@
 ![Covid-19](./img/covid-19-1330px.jpg)
 <!--image from CDC's web page -->
-# Characteristics of Coronavirus Hotspots
+# Predicting Coronavirus Cases at the County Level
 Ian Branum -- *15 May 2020*
 
 ## Table of Contents
@@ -12,13 +12,13 @@ Ian Branum -- *15 May 2020*
 - [Conclusion](#conclusion)
 
 ## Introduction
-Coronavirus is understandably on everyone's mind. Organizations from the CDC, to CNN, to the New York Times publish charts showing exponential growth rates and maps showing an uneven distribution of cases across the United States. In aggregate the message is terrifying. My intention with this study, and the ones to follow, is to zoom in on the details, to examine the spread of the virus at a more localized level. In this study I will attempt to to predict the growth of Coronavirus cases per 100,000 residents at the US county level based upon demography, geography, and governmental actions. 
+Coronavirus is understandably on everyone's mind. Organizations from the CDC, to CNN, to the New York Times publish charts showing exponential growth rates and maps showing an uneven distribution of cases across the United States. In aggregate the message is terrifying. My intention with this study, and the ones to follow, is to zoom in on the details, to examine the spread of the virus at a more localized level. In this study I will attempt to predict the growth of Coronavirus cases per 100,000 residents at the US county level based upon demography, geography, and governmental actions. 
 
 ## Data Sources
 With this study I intend to identify the demographic characteristics that correlate to higher or lower case rates. To that end, I collected from a variety of sources as follows. 
 
 ### New York Times Coronavirus Data
-The core data source for this study is the [New York Times Coronavirus](https://github.com/nytimes/covid-19-data) Github page. This page contains a listing of every case in the United States by date and county. This was the core data set to which everything else was linked. Table 1 shows the structure of the data set. As of 10 April 2020 there are **45,254** entries for **2477** distinct counties. 
+The core data source for this study is the [New York Times Coronavirus](https://github.com/nytimes/covid-19-data) Github page. This page contains a listing of every case in the United States by date and county. This was the core data set to which everything else was linked. Table 1 shows the structure of the data set. As of 15 May 2020 there are **142,696** entries for **2477** distinct counties. 
 
 > Table 1 - NYT Coronavirus Github Page
 >![Table1](./img/nyt.png)
@@ -41,7 +41,7 @@ Finally, as one potential hypothesis related to the effects of international arr
 > Table 4 - Top Airports List
 >![Table1](./img/airports.png)
 
-## Data Transormation and Feature Engineering
+## Data Transformation and Feature Engineering
 I took the various data sources, cleaned them, and then fused them into two dataframes, one with demographic and geographic data that did not change for each county the period covered and one with time-dependent data that changed each day during the period covered. In addition to some basic data cleaning, imputation, etc. it was necessary to create a number of calculated features. 
 
 ### Case Rate and Death Rate
@@ -62,7 +62,7 @@ The number of days since shelter in place was declared at the state level. I did
 The number of days since shelter in place was lifted at the state level. Again, I did not county and below orders. 
 
 ### Airport Arrivals
-Using the counties data and the airports data, I created two features: imputed international arrivals and imputed domestic arrivals. In short, if an airport was within 100km of the center of a county, the annual arrivals, domestic and international, were assumed to impact that county. A simplistic algorithm, but sufficient for a start. 
+Using the counties data and the airports data, I created two features: imputed international arrivals and imputed domestic arrivals. In short, if an airport was within 200km of the center of a county, the annual arrivals, domestic and international, were assumed to impact that county and were imputed to the county in proportion to the proximity, dropping to zero at 200km.  
 
 ### Population density and household density
 Created population and household per square kilometer features. 
@@ -79,7 +79,7 @@ For the models I fused the two dataframes together, left joining on the larger, 
 - Median household income
 - Percent HS graduate
 - Percent BA/BS+
-- Perceent MA/MS+
+- Percent MA/MS+
 - Median house price
 - Median rent
 - International air arrival indext
@@ -114,7 +114,7 @@ The next model I tried was a XGBoost model with no parameter tuning. That provid
 >![Table1](./img/XGB-untuned.png)
 
 ### Un-Tuned XGBoost Model
-Using using AWS Sagemaker Studio I then executed a grid search on over a thousand combinations of hyper parameter values and identified what I believe to be the optimum. That provided an RMSE of 12. The resulting actual vs predicted graph is shown in Graph 5. 
+Using AWS Sagemaker Studio I then executed a grid search on over a thousand combinations of hyper parameter values and identified what I believe to be the optimum. That provided an RMSE of 12. The resulting actual vs predicted graph is shown in Graph 5. 
 
 > Graph 5 - Tuned XGBoost Model
 >![Table1](./img/XGB-tuned.png)
@@ -133,4 +133,4 @@ days_since_sip and days_since_10p100k are by far the most important features. da
 >![Table1](./img/static.png)
 
 ## Conclusion
-Given the failure of the dynamic features alone and the static features alone to be predictive, I conclude that the tuned XGBoost model, with demographic features, geographic features, and governmental action features in combination, can provide a highly accurate prediction of Coronovirus cases per 100,000 residents at the county level. 
+Given the failure of the dynamic features alone and the static features alone to be predictive, I conclude that the tuned XGBoost model, with demographic features, geographic features, and governmental action features in combination, can provide a highly accurate prediction of Coronavirus cases per 100,000 residents at the county level. 
