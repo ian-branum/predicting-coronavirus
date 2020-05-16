@@ -5,19 +5,14 @@ Ian Branum -- *10 April 2020*
 
 ## Table of Contents
 
-- [Executive Summary](#executive-summary)
 - [Introduction](#introduction)
 - [Data Sources](#data-sources)
 - [Data Transformation and Feature Engineering](#data-transformation-and-feature-engineering)
 - [Analysis](#analysis)
-- [Results](#results)
- 
-
-
-## Executive Summary
+- [Conclusion](#conclusion)
 
 ## Introduction
-Coronavirus is understandably on everyone's mind. Organizations from the CDC, to CNN, to the New York Times publish charts showing exponential growth rates and maps showing an uneven distribution of cases across the United States. In aggregate the message is terrifying. My intention with this study, and the ones to follow, is to zoom in on the details, to examine the spread of the virus at a more localized level. In this study I will examine the uneven distribution of cases across the United States by county. Some counties have proportionally more cases than others: what characteristics distinguish the harder hit counties from those less hard hit? I will make no assertions as to causation at this point, merely as to correlation. 
+Coronavirus is understandably on everyone's mind. Organizations from the CDC, to CNN, to the New York Times publish charts showing exponential growth rates and maps showing an uneven distribution of cases across the United States. In aggregate the message is terrifying. My intention with this study, and the ones to follow, is to zoom in on the details, to examine the spread of the virus at a more localized level. In this study I will attempt to to predict the growth of Coronavirus cases per 100,000 residents at the US county level based upon demography, geography, and governmental actions. 
 
 ## Data Sources
 With this study I intend to identify the demographic characteristics that correlate to higher or lower case rates. To that end, I collected from a variety of sources as follows. 
@@ -92,11 +87,51 @@ For the models I fused the two dataframes together, left joining on the larger, 
 - Population density
 - Household density
 
-While the NYT Coronavirus data set has 139,802 rows as of 14 May 2020, my resulting data set only had 
+While the NYT Coronavirus data set has 139,802 rows as of 14 May 2020, my resulting data set only had 48,465 rows due to the fact that Census only provides data for 837 of 3,000 counties in the United States. That said, those counties encompass 84% of the population of the United States. In viewing the correlation matrix (Chart 1) fo these features, two things  are noteworthy: there is a lot of collinearity between features generally, but no features correlate strongly to the objective, case_rate. 
+
+> Graph 1 - Feature Correlation Matrix
+>![Table1](./img/corr.png)
 
 ## Analysis
+I applied a series of prediction models of increasing complexity to the data set, starting with a base, 'dumb', model and eventually ending with a tuned XGBoost model. 
+
+### Base Model
+As a base, 'dumb' model, I used the mean of the training set. That provided a benchmark RMSE of 283. The resulting actual vs predicted graph is shown in Graph 2.
+
+> Graph 2 - Base 'Dumb' Model
+>![Table1](./img/dumb.png)
+
+### Linear Regression Model
+The next model I tried was a Linear Regression model with a polynomial feature of order 2. That provided an RMSE of 173, a considerable improvement over the base model. The resulting actual vs predicted graph is shown in Graph 3. I did not attempt to improve this other than by trying various orders on the polynomial feature , but rather jumped to XGBoost. 
+
+> Graph 3 - Linear Model
+>![Table1](./img/Linear.png)
+
+### Un-Tuned XGBoost Model
+The next model I tried was a XGBoost model with no parameter tuning. That provided an RMSE of 28, a spectacular improvement over the base model. The resulting actual vs predicted graph is shown in Graph 4. This provided the best starting point so I pursued it.  
+
+> Graph 4 - Tuned XGBoost Model
+>![Table1](./img/XGB-untuned.png)
+
+### Un-Tuned XGBoost Model
+Using using AWS Sagemaker Studio I then executed a grid search on over a thousand combinations of hyper parameter values and identified what I believe to be the optimum. That provided an RMSE of 12. The resulting actual vs predicted graph is shown in Graph 5. 
+
+> Graph 5 - Tuned XGBoost Model
+>![Table1](./img/XGB-tuned.png)
+
+This result was good enough that I became concerned that I might have a data leakage issue. To explore this possibility, I inspected the feature importance values, as seen in Table X. 
+
+> Table X - Feature Importance Values
+>![Table1](./img/features.png)
+
+days_since_sip and days_since_10p100k are by far the most important features. days_since_sip could be a form of data leakage as no governor is going to declare shelter in place unless there is a problem. I wondered if it were possible that these two alone were predictive. To test that hypothesis I split the data set into two, one with just the three 'days since' features that I had created, the other with all of the static 'demography and geography' features. I ran the same XGBoost on both sets, yielding poor results, as seen in Graphs 6 and 7. While the tuned hyper parameters may not be good for these two subsets of the data, the initial results were so poor I opted not to tune them. 
+
+> Graph 6 - Tuned XGBoost Model - Dynamic Features Only
+>![Table1](./img/dynamic.png)
+
+> Graph 7 - Tuned XGBoost Model - Static Features Only
+>![Table1](./img/static.png)
 
 
-
-## Results
-
+## Conclusion
+Given the failure of the dynamic features alone and the static features alone to be predictive, I conclude that the tuned XGBoost model, with demographic features, geographic features, and governmental action features in combinatio
