@@ -1,7 +1,7 @@
 ![Covid-19](./img/covid-19-1330px.jpg)
 <!--image from CDC's web page -->
 # Characteristics of Coronavirus Hotspots
-Ian Branum -- *10 April 2020*
+Ian Branum -- *15 May 2020*
 
 ## Table of Contents
 
